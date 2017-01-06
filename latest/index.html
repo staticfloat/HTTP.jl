@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · HTTP.jl</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/default.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Ubuntu+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="assets/documenter.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="../versions.js"></script></head><body><nav class="toc"><h1>HTTP.jl</h1><form class="search" action="search.html"><select id="version-selector" onChange="window.location.href=this.value"><option value="#" selected="selected" disabled="disabled">Version</option></select><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li class="current"><a class="toctext" href="index.html">Home</a><ul class="internal"><li><a class="toctext" href="#Functions-and-Types-1">Functions &amp; Types</a></li></ul></li></ul></nav><article id="docs"><header><nav><ul><li><a href="index.html">Home</a></li></ul><a class="edit-page" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/docs/src/index.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/></header><h1><a class="nav-anchor" id="HTTP.jl-Documentation-1" href="#HTTP.jl-Documentation-1">HTTP.jl Documentation</a></h1><p><code>HTTP.jl</code> provides a pure Julia library for HTTP functionality.</p><ul><li><a href="index.html#HTTP.jl-Documentation-1">HTTP.jl Documentation</a></li><ul><li><a href="index.html#Functions-and-Types-1">Functions &amp; Types</a></li></ul></ul><h2><a class="nav-anchor" id="Functions-and-Types-1" href="#Functions-and-Types-1">Functions &amp; Types</a></h2><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.get" href="#HTTP.get"><code>HTTP.get</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.get(uri) -&gt; Response
+        HTTP.get(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;GET&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.post" href="#HTTP.post"><code>HTTP.post</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.post(uri) -&gt; Response
+        HTTP.post(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;POST&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.put" href="#HTTP.put"><code>HTTP.put</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.put(uri) -&gt; Response
+        HTTP.put(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;PUT&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.delete" href="#HTTP.delete"><code>HTTP.delete</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.delete(uri) -&gt; Response
+        HTTP.delete(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;DELETE&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.head" href="#HTTP.head"><code>HTTP.head</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.head(uri) -&gt; Response
+        HTTP.head(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;HEAD&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.trace" href="#HTTP.trace"><code>HTTP.trace</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.trace(uri) -&gt; Response
+        HTTP.trace(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;TRACE&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.patch" href="#HTTP.patch"><code>HTTP.patch</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.patch(uri) -&gt; Response
+        HTTP.patch(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;PATCH&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.options" href="#HTTP.options"><code>HTTP.options</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.options(uri) -&gt; Response
+        HTTP.options(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;OPTIONS&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.connect" href="#HTTP.connect"><code>HTTP.connect</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">        HTTP.connect(uri) -&gt; Response
+        HTTP.connect(client::HTTP.Client, uri) -&gt; Response
+
+    Build and execute an http &quot;CONNECT&quot; request. Query parameters must be included in the uri itself.
+    Returns a `Response` object that includes the resulting status code (`HTTP.status(r)` and `HTTP.statustext(r)`),
+    response headers (`HTTP.headers(r)`), cookies (`HTTP.cookies(r)`), response history if redirects were involved
+    (`HTTP.history(r)`), and response body (`HTTP.body(r)` or `string(r)` or `HTTP.bytes(r)`).
+
+    Additional keyword arguments supported, include:
+
+    * `headers::Dict{String,String}`: headers given as Dict to be sent with the request
+    * `body`: a request body can be given as a `String`, `Vector{UInt8}`, `IO`, or `HTTP.FIFOBuffer`; see example below for how to utilize `HTTP.FIFOBuffer` for &quot;streaming&quot; request bodies
+    * `stream::Bool=false`: enable response body streaming; depending on the response body size, the request will return before the full body has been received; as the response body is read, additional bytes will be recieved and put in the response body. Readers should read until `eof(response.body) == true`; see below for an example of response streaming
+    * `chunksize::Int`: if a request body is larger than `chunksize`, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than `chunksize`
+    &lt;!-- * `gzip::Bool`: --&gt;
+    * `connecttimeout::Float64`: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds
+    * `readtimeout::Float64`: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds
+    * `tlsconfig::TLS.SSLConfig`: a valid `TLS.SSLConfig` which will be used to initialize every https connection
+    * `maxredirects::Int`: the maximum number of redirects that will automatically be followed for an http request
+
+    Simple request example:
+    ```julia
+    julia&gt; resp = HTTP.get(&quot;http://httpbin.org/ip&quot;)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 32
+    Access-Control-Allow-Credentials: true
+    Date: Fri, 06 Jan 2017 05:07:07 GMT
+    Content-Type: application/json
+    Access-Control-Allow-Origin: *
+    Server: nginx
+
+    {
+      &quot;origin&quot;: &quot;65.130.216.45&quot;
+    }
+
+
+    julia&gt; string(resp)
+    &quot;{</code></pre><p>&quot;origin&quot;: &quot;65.130.216.45&quot; } &quot;         ```</p><pre><code class="language-none">    Response streaming example:
+    ```julia
+    julia&gt; r = HTTP.get(&quot;http://httpbin.org/stream/100&quot;; stream=true)
+    HTTP.Response:
+    HTTP/1.1 200 OK
+    Content-Length: 0
+
+
+    julia&gt; body = HTTP.body(r)
+    HTTP.FIFOBuffer(0,1048576,0,1,1,UInt8[],Condition(Any[]),Task (runnable) @0x000000010d221690,false)
+
+    julia&gt; while true
+        println(String(readavailable(body)))
+        eof(body) &amp;&amp; break
+    end
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 0, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 1, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 2, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    {&quot;url&quot;: &quot;http://httpbin.org/stream/100&quot;, &quot;headers&quot;: {&quot;Host&quot;: &quot;httpbin.org&quot;, &quot;Accept&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;, &quot;User-Agent&quot;: &quot;HTTP.jl/0.0.0&quot;}, &quot;args&quot;: {}, &quot;id&quot;: 3, &quot;origin&quot;: &quot;65.130.216.45&quot;}
+    ...
+    ```
+
+    Request streaming example:
+    ```julia
+    # create a FIFOBuffer for sending our request body
+    f = HTTP.FIFOBuffer()
+    # write initial data
+    write(f, &quot;hey&quot;)
+    # start an HTTP.post asynchronously
+    t = @async HTTP.post(&quot;http://httpbin.org/post&quot;; body=f)
+    write(f, &quot; there &quot;) # as we write to f, it triggers another chunk to be sent in our async request
+    write(f, &quot;sailor&quot;)
+    close(f) # setting eof on f causes the async request to send a final chunk and return the response
+
+    resp = t.result # get our response by getting the result of our asynchronous task
+    ```</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L244-L326">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.send!" href="#HTTP.send!"><code>HTTP.send!</code></a> — <span class="docstring-category">Function</span>.</div><div><pre><code class="language-none">`HTTP.send!([client::HTTP.Client,] request; stream::Bool=false)`</code></pre><p>Send an <code>HTTP.Request</code> to its associated host/uri. Set the keyword argument <code>stream=true</code> to enable response streaming, which will result in <code>HTTP.send!</code> potentially returning before the entire response body has been received. If the response body buffer fills all the way up, it will block until its contents are read, freeing up additional space to write.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L57-L64">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.Client" href="#HTTP.Client"><code>HTTP.Client</code></a> — <span class="docstring-category">Type</span>.</div><div><p><code>HTTP.Client([logger::IO]; args...)</code></p><p>A type to make connections to remote hosts, send HTTP requests, and manage state between requests. Takes an optional <code>logger</code> IO argument where client activity is recorded (defaults to <code>STDOUT</code>). Additional keyword arguments can be passed that will get transmitted with each HTTP request:</p><ul><li><p><code>chunksize::Int</code>: if a request body is larger than <code>chunksize</code>, the &quot;chunked-transfer&quot; http mechanism will be used and chunks will be sent no larger than <code>chunksize</code></p></li></ul><p>&lt;!– * <code>gzip::Bool</code>: –&gt;</p><ul><li><p><code>connecttimeout::Float64</code>: sets a timeout on how long to wait when trying to connect to a remote host; default = 10.0 seconds</p></li><li><p><code>readtimeout::Float64</code>: sets a timeout on how long to wait when receiving a response from a remote host; default = 9.0 seconds</p></li><li><p><code>tlsconfig::TLS.SSLConfig</code>: a valid <code>TLS.SSLConfig</code> which will be used to initialize every https connection</p></li><li><p><code>maxredirects::Int</code>: the maximum number of redirects that will automatically be followed for an http request</p></li></ul></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L21-L34">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.Connection" href="#HTTP.Connection"><code>HTTP.Connection</code></a> — <span class="docstring-category">Type</span>.</div><div><p><code>HTTP.Connection</code></p><p>Represents a persistent client connection to a remote host; only created when a server response includes the &quot;Connection: keep-alive&quot; header. A connection will be reused when sending subsequent requests to the same host.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/client.jl#L3-L9">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.Request" href="#HTTP.Request"><code>HTTP.Request</code></a> — <span class="docstring-category">Type</span>.</div><div><p>A type representing an HTTP request.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/types.jl#L52-L54">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.Response" href="#HTTP.Response"><code>HTTP.Response</code></a> — <span class="docstring-category">Type</span>.</div><div><p>A type representing an HTTP response.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/types.jl#L111-L113">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.parse" href="#HTTP.parse"><code>HTTP.parse</code></a> — <span class="docstring-category">Function</span>.</div><div><p><code>HTTP.parse{R &lt;: Union{Request, Response}}(::Type{R}, str)</code> =&gt; <code>R</code></p><p>Given a string input <code>str</code>, use <a href="https://github.com/nodejs/http-parser"><code>http-parser</code></a> to create and populate a Julia <code>Request</code> or <code>Response</code> object.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/parser.jl#L353-L358">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.Cookies.Cookie" href="#HTTP.Cookies.Cookie"><code>HTTP.Cookies.Cookie</code></a> — <span class="docstring-category">Type</span>.</div><div><p>A Cookie represents an HTTP cookie as sent in the Set-Cookie header of an HTTP response or the Cookie header of an HTTP request.</p><p>See http:#tools.ietf.org/html/rfc6265 for details.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/cookies.jl#L13-L18">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.URI" href="#HTTP.URI"><code>HTTP.URI</code></a> — <span class="docstring-category">Type</span>.</div><div><p><code>HTTP.URI(str::String)</code> =&gt; <code>HTTP.URI</code></p><p>A type representing a uri/url used for resource identification on the web.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/uri.jl#L10-L14">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.escape" href="#HTTP.escape"><code>HTTP.escape</code></a> — <span class="docstring-category">Function</span>.</div><div><p>create a valid uri/url string by escaping characters</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/uri.jl#L404">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.unescape" href="#HTTP.unescape"><code>HTTP.unescape</code></a> — <span class="docstring-category">Function</span>.</div><div><p>unescape a uri/url</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/uri.jl#L357">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.userinfo" href="#HTTP.userinfo"><code>HTTP.userinfo</code></a> — <span class="docstring-category">Function</span>.</div><div><p>Splits the userinfo portion of an URI in the format user:password and returns the components as tuple.</p><p>Note: This is just a convenience method, and this form of usage is deprecated as of rfc3986. See: http://tools.ietf.org/html/rfc3986#section-3.2.1</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/uri.jl#L408-L415">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.splitpath" href="#HTTP.splitpath"><code>HTTP.splitpath</code></a> — <span class="docstring-category">Function</span>.</div><div><p>Splits the path into components and parameters See: http://tools.ietf.org/html/rfc3986#section-3.3</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/uri.jl#L426-L429">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="Base.isvalid" href="#Base.isvalid"><code>Base.isvalid</code></a> — <span class="docstring-category">Function</span>.</div><div><p>checks of a <code>HTTP.URI</code> is valid</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/uri.jl#L460">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.sniff" href="#HTTP.sniff"><code>HTTP.sniff</code></a> — <span class="docstring-category">Function</span>.</div><div><p><code>HTTP.sniff(content::Union{Vector{UInt8}, String, IO})</code> =&gt; <code>String</code> (mimetype)</p><p><code>HTTP.sniff</code> will look at the first 512 bytes of <code>content</code> to try and determine a valid mimetype. If a mimetype can&#39;t be determined appropriately, <code>&quot;application/octet-stream&quot;</code> is returned.</p><p>Supports JSON detection through the <code>HTTP.isjson(content)</code> function.</p></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/sniff.jl#L11-L18">source</a><br/></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="HTTP.FIFOBuffer" href="#HTTP.FIFOBuffer"><code>HTTP.FIFOBuffer</code></a> — <span class="docstring-category">Type</span>.</div><div><p>A <code>FIFOBuffer</code> is a first-in, first-out, in-memory, async-friendly IO buffer type</p><p>Constructors: <code>FIFOBuffer([max])</code>: creates a <code>FIFOBuffer</code> with a maximum size of <code>max</code>; this means that bytes can be written up until <code>max</code> number of bytes have been written (with none being read). At this point, the <code>FIFOBuffer</code> is full and will return 0 for all subsequent writes. If no <code>max</code> argument is given, then an &quot;infinite&quot; size <code>FIFOBuffer</code> is returned; this essentially allows all writes every time.</p><p>Reading is supported via <code>readavailable</code>, which &quot;extracts&quot; all bytes that have been written, starting at the earliest bytes written</p><p>A <code>FIFOBuffer</code> is built to be used asynchronously to allow buffered reading and writing. In particular, a <code>FIFOBuffer</code> detects if it is being read from/written to the main task, or asynchronously, and will behave slightly differently depending on which.</p><p>Specifically, when reading from a <code>FIFOBuffer</code>, if accessed from the main task, it will not block if there are no bytes available to read. If being read from asynchronously, however, reading will block until additional bytes have been written. An example of this in action is:</p><pre><code class="language-julia">f = HTTP.FIFOBuffer(5) # create a FIFOBuffer that will hold at most 5 bytes, currently empty
+f2 = HTTP.FIFOBuffer(5) # a 2nd buffer that we&#39;ll write to asynchronously
+
+# start an asynchronous reading task
+tsk = @async begin
+    while !eof(f)
+        write(f2, readavailable(f))
+    end
+end
+
+# now write some bytes to the buffer
+# writing triggers our async task to wake up and read the bytes we just wrote
+# leaving the buffer empty again and blocking again until more bytes have been written
+write(f, [0x01, 0x02, 0x03, 0x04, 0x05])
+
+# we can see that `f2` now holds the bytes we wrote to `f`
+String(readavailable(f2))
+
+# our async task will continue until `f` is closed
+close(f)
+
+istaskdone(tsk) # true</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaWeb/HTTP.jl/tree/93252ead19279234c36f5b3837fa0a088b43b3b0/src/fifobuffer.jl#L1-L42">source</a><br/></section><footer><hr/></footer></article></body></html>
