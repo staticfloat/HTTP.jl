@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "HTTP.Request",
     "category": "Type",
-    "text": "A type representing an HTTP request.\n\n\n\n"
+    "text": "Request()\nRequest(method, uri, headers, body; options=RequestOptions())\n\nA type representing an http request. method can be provided as a string or HTTP.GET type enum. uri can be provided as an actual HTTP.URI or string. headers should be provided as a Dict. body may be provided as string, byte vector, IO, or HTTP.FIFOBuffer. options should be a RequestOptions type, see ?HTTP.RequestOptions for details.\n\nAccessor methods include:\n\nHTTP.method: method for a request\nHTTP.major: major http version for a request\nHTTP.minor: minor http version for a request\nHTTP.uri: uri for a request\nHTTP.headers: headers for a request\nHTTP.body: body for a request as a HTTP.FIFOBuffer\n\n\n\n"
 },
 
 {
@@ -37,7 +37,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "HTTP.Response",
     "category": "Type",
-    "text": "A type representing an HTTP response.\n\n\n\n"
+    "text": "Response(status)\nResponse(status, headers, body)\n\nA type representing an http response. status represents the http status code for the response. headers should be provided as a Dict. body can be provided as a string, byte vector, IO, or HTTP.FIFOBuffer.\n\nAccessor methods include:\n\nHTTP.status: status for a response\nHTTP.statustext: statustext for a response\nHTTP.major: major http version for a response\nHTTP.minor: minor http version for a response\nHTTP.cookies: cookies for a response, returned as a Vector{HTTP.Cookie}\nHTTP.headers: headers for a response\nHTTP.request: the HTTP.Request that resulted in this response\nHTTP.history: history for a response if redirects were followed from an original request\nHTTP.body: body for a response as a HTTP.FIFOBuffer\n\nTwo convenience methods are provided for accessing a response body:\n\nstring(r): consume the reponse body, returning it as a String\nHTTP.bytes(r): consume the response body, returning it as a Vector{UInt8}\n\n\n\n"
 },
 
 {
